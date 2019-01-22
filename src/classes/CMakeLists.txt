@@ -12,7 +12,7 @@ elseif(HIDAPI_FOUND)
   target_link_libraries(g810-led
     HIDAPI_LIBRARIES
     ) 
-  target_compile_definitions(g810-led INTERFACE hidapi=1)  
+#  target_compile_definitions(g810-led PUBLIC hidapi=1)  
 endif()
 
 install(TARGETS g810-led DESTINATION lib)
