@@ -1,3 +1,19 @@
+/*
+  This file is part of g810-led.
+
+  g810-led is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  g810-led is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with g810-led.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "utils.h"
 
 #include <iostream>
@@ -25,6 +41,7 @@ namespace utils {
 		if (val == "color") nativeEffect = LedKeyboard::NativeEffect::color;
 		else if (val == "cycle") nativeEffect = LedKeyboard::NativeEffect::cycle;
 		else if (val == "breathing") nativeEffect = LedKeyboard::NativeEffect::breathing;
+		else if (val == "waves") nativeEffect = LedKeyboard::NativeEffect::waves;
 		else if (val == "hwave") nativeEffect = LedKeyboard::NativeEffect::hwave;
 		else if (val == "vwave") nativeEffect = LedKeyboard::NativeEffect::vwave;
 		else if (val == "cwave") nativeEffect = LedKeyboard::NativeEffect::cwave;
@@ -202,10 +219,17 @@ namespace utils {
 		return true;
 	}
 	
-	bool parseSpeed(std::string val, uint8_t &speed) {
-		if (val.length() == 1) val = "0" + val;
-		if (val.length() != 2) return false;
-		speed = std::stoul("0x" + val, nullptr, 16);
+	bool parsePeriod(std::string val, std::chrono::duration<uint16_t, std::milli> &period) {
+		if (!val.empty() && val.back() == 's') {
+			if ((val.length() >= 2) && (val[val.length()-2] == 'm'))
+				period = std::chrono::milliseconds(std::stoul(val, nullptr));
+			else
+				period = std::chrono::seconds(std::stoul(val, nullptr));
+		} else {
+			if (val.length() == 1) val = "0" + val;
+			if (val.length() != 2) return false;
+			period = std::chrono::milliseconds(std::stoul("0x" + val, nullptr, 16) << 8);
+		}
 		return true;
 	}
 	

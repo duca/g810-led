@@ -1,6 +1,23 @@
+/*
+  This file is part of g810-led.
+
+  g810-led is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  g810-led is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with g810-led.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #ifndef KEYBOARD_CLASS
 #define KEYBOARD_CLASS
 
+#include <chrono>
 #include <iostream>
 #include <vector>
 
@@ -53,13 +70,23 @@ class LedKeyboard {
 			gpro
 		};
 		enum class StartupMode : uint8_t {
+			 // TODO: On the G Pro, the value 1 selects the
+			 // user-stored lighting effect, which is not
+			 // necessarily wave.
 			wave = 0x01,
 			color
 		};
-		enum class NativeEffect : uint8_t {
+		enum class NativeEffectGroup : uint8_t {
 			color = 0x01,
 			breathing,
 			cycle,
+			waves
+		};
+		enum class NativeEffect : uint16_t {
+			color = static_cast<uint16_t>(NativeEffectGroup::color) << 8,
+			breathing = static_cast<uint16_t>(NativeEffectGroup::breathing) << 8,
+			cycle = static_cast<uint16_t>(NativeEffectGroup::cycle) << 8,
+			waves = static_cast<uint16_t>(NativeEffectGroup::waves) << 8,
 			hwave,
 			vwave,
 			cwave
@@ -68,6 +95,11 @@ class LedKeyboard {
 			all = 0xff,
 			keys = 0x00,
 			logo
+		};
+		enum class NativeEffectStorage : uint8_t {
+			none = 0x00,
+			// "user-stored lighting" can be recalled with backlight+7
+			user,
 		};
 		enum class KeyGroup : uint8_t {
 			logo = 0x00,
@@ -163,8 +195,10 @@ class LedKeyboard {
 		
 		bool setRegion(uint8_t region, Color color);
 		bool setStartupMode(StartupMode startupMode);
-		
-		bool setNativeEffect(NativeEffect effect, NativeEffectPart part, uint8_t speed, Color color);
+
+		bool setNativeEffect(NativeEffect effect, NativeEffectPart part,
+				     std::chrono::duration<uint16_t, std::milli> period, Color color,
+				     NativeEffectStorage storage);
 		
 		
 	private:

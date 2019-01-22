@@ -1,3 +1,19 @@
+/*
+  This file is part of g810-led.
+
+  g810-led is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  g810-led is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with g810-led.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <iomanip>
 #include <iostream>
 #include <unistd.h>
@@ -103,10 +119,11 @@ int setRegion(LedKeyboard &kbd, std::string arg2, std::string arg3) {
 	return 1;
 }
 
-int setFX(LedKeyboard &kbd, std::string arg2, std::string arg3, std::string arg4, std::string arg5 = "") {
+int setFX(LedKeyboard &kbd, LedKeyboard::NativeEffectStorage storage,
+	  const std::string &arg2, const std::string &arg3, const std::string &arg4, const std::string &arg5) {
 	LedKeyboard::NativeEffect effect;
 	LedKeyboard::NativeEffectPart effectPart;
-	uint8_t speed = 0;
+	std::chrono::duration<uint16_t, std::milli> period(0);
 	LedKeyboard::Color color;
 	if (! utils::parseNativeEffect(arg2, effect)) return 1;
 	if (! utils::parseNativeEffectPart(arg3, effectPart)) return 1;
@@ -118,23 +135,33 @@ int setFX(LedKeyboard &kbd, std::string arg2, std::string arg3, std::string arg4
 		case LedKeyboard::NativeEffect::breathing:
 			if (! utils::parseColor(arg4, color)) return 1;
 			if (arg5 == "") return 1;
-			if (! utils::parseSpeed(arg5, speed)) return 1;
+			if (! utils::parsePeriod(arg5, period)) return 1;
 			break;
 		case LedKeyboard::NativeEffect::cycle:
+		case LedKeyboard::NativeEffect::waves:
 		case LedKeyboard::NativeEffect::hwave:
 		case LedKeyboard::NativeEffect::vwave:
 		case LedKeyboard::NativeEffect::cwave:
-			if (! utils::parseSpeed(arg4, speed)) return 1;
+			if (! utils::parsePeriod(arg4, period)) return 1;
 			break;
 	}
 
 	if (! kbd.open()) return 1;
 
-	if (! kbd.setNativeEffect(effect, effectPart, speed, color)) return 1;
+	if (! kbd.setNativeEffect(effect, effectPart, period, color, storage)) return 1;
 
 	return 0;
 }
 
+int setFX(LedKeyboard &kbd, const std::string &arg2, const std::string &arg3, const std::string &arg4 = std::string(),
+	  const std::string &arg5 = std::string()) {
+	return setFX(kbd, LedKeyboard::NativeEffectStorage::none, arg2, arg3, arg4, arg5);
+}
+
+int storeFX(LedKeyboard &kbd, const std::string &arg2, const std::string &arg3, const std::string &arg4 = std::string(),
+	  const std::string &arg5 = std::string()) {
+	return setFX(kbd, LedKeyboard::NativeEffectStorage::user, arg2, arg3, arg4, arg5);
+}
 
 int setStartupMode(LedKeyboard &kbd, std::string arg2) {
 	LedKeyboard::StartupMode startupMode;
@@ -302,6 +329,10 @@ int main(int argc, char **argv) {
 			return setFX(kbd, argv[argIndex + 1], argv[argIndex + 2], argv[argIndex + 3], argv[argIndex + 4]);
 		else if (argc > (argIndex + 3) && arg == "-fx")
 			return setFX(kbd, argv[argIndex + 1], argv[argIndex + 2], argv[argIndex + 3]);
+		else if (argc > (argIndex + 4) && arg == "-fx-store")
+			return storeFX(kbd, argv[argIndex + 1], argv[argIndex + 2], argv[argIndex + 3], argv[argIndex + 4]);
+		else if (argc > (argIndex + 3) && arg == "-fx-store")
+			return storeFX(kbd, argv[argIndex + 1], argv[argIndex + 2], argv[argIndex + 3]);
 		else if (argc > (argIndex + 1) && arg == "--startup-mode") return setStartupMode(kbd, argv[argIndex + 1]);
 		else { help::usage(argv[0]); return 1; }
 	}

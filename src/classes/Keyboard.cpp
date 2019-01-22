@@ -1,3 +1,19 @@
+/*
+  This file is part of g810-led.
+
+  g810-led is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  g810-led is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with g810-led.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "Keyboard.h"
 
 #include <iostream>
@@ -433,6 +449,7 @@ bool LedKeyboard::setKeys(KeyValueArray keyValues) {
 				break;
 			case LedKeyboard::KeyAddressGroup::keys:
 				switch (currentDevice.model) {
+					case LedKeyboard::KeyboardModel::g513:
 					case LedKeyboard::KeyboardModel::g610:
 					case LedKeyboard::KeyboardModel::g810:
 					case LedKeyboard::KeyboardModel::g910:
@@ -567,7 +584,8 @@ bool LedKeyboard::setAllKeys(LedKeyboard::Color color) {
 			for (uint8_t rIndex=0x01; rIndex <= 0x05; rIndex++) if (! setRegion(rIndex, color)) return false;
 			return true;
 		case KeyboardModel::g413:
-			setNativeEffect(NativeEffect::color, NativeEffectPart::keys, 0, color);
+			setNativeEffect(NativeEffect::color, NativeEffectPart::keys, std::chrono::seconds(0), color,
+					NativeEffectStorage::none);
 			return true;
 		case KeyboardModel::g410:
     case KeyboardModel::g513:
@@ -696,24 +714,25 @@ bool LedKeyboard::setStartupMode(StartupMode startupMode) {
 }
 
 
-bool LedKeyboard::setNativeEffect(NativeEffect effect, NativeEffectPart part, uint8_t speed, Color color) {
+bool LedKeyboard::setNativeEffect(NativeEffect effect, NativeEffectPart part,
+				  std::chrono::duration<uint16_t, std::milli> period, Color color,
+				  NativeEffectStorage storage) {
 	uint8_t protocolByte = 0;
+	NativeEffectGroup effectGroup = static_cast<NativeEffectGroup>(static_cast<uint16_t>(effect) >> 8);
 
 	// NativeEffectPart::all is not in the device protocol, but an alias for both keys and logo, plus indicators
 	if (part == LedKeyboard::NativeEffectPart::all) {
-		switch (effect) {
-			case LedKeyboard::NativeEffect::color:
+		switch (effectGroup) {
+			case NativeEffectGroup::color:
 				if (! setGroupKeys(LedKeyboard::KeyGroup::indicators, color)) return false;
 				if (! commit()) return false;
 				break;
-			case LedKeyboard::NativeEffect::breathing:
+			case NativeEffectGroup::breathing:
 				if (! setGroupKeys(LedKeyboard::KeyGroup::indicators, color)) return false;;
 				if (! commit()) return false;;
 				break;
-			case LedKeyboard::NativeEffect::cycle:
-			case LedKeyboard::NativeEffect::hwave:
-			case LedKeyboard::NativeEffect::vwave:
-			case LedKeyboard::NativeEffect::cwave:
+			case NativeEffectGroup::cycle:
+			case NativeEffectGroup::waves:
 				if (! setGroupKeys(
 					LedKeyboard::KeyGroup::indicators,
 					LedKeyboard::Color({0xff, 0xff, 0xff}))
@@ -722,8 +741,8 @@ bool LedKeyboard::setNativeEffect(NativeEffect effect, NativeEffectPart part, ui
 				break;
 		}
 		return (
-			setNativeEffect(effect, LedKeyboard::NativeEffectPart::keys, speed, color) &&
-			setNativeEffect(effect, LedKeyboard::NativeEffectPart::logo, speed, color));
+			setNativeEffect(effect, LedKeyboard::NativeEffectPart::keys, period, color, storage) &&
+			setNativeEffect(effect, LedKeyboard::NativeEffectPart::logo, period, color, storage));
 	}
 
 	switch (currentDevice.model) {
@@ -746,71 +765,28 @@ bool LedKeyboard::setNativeEffect(NativeEffect effect, NativeEffectPart part, ui
 			return false;
 	}
 
-	byte_buffer_t data;
-
-	switch (effect) {
-
-		case NativeEffect::color:
-			data = { 0x11, 0xff, protocolByte, 0x3c, (uint8_t)part, 0x01, color.red, color.green, color.blue, 0x02 };
-			break;
-		case NativeEffect::breathing:
-			data = {
-				0x11, 0xff, protocolByte, 0x3c, (uint8_t)part, 0x02,
-				color.red, color.green, color.blue, speed, 
-				0x10, 0x00, 0x64 
-			};
-			break;
-		case NativeEffect::cycle:
-			data = {
-				0x11, 0xff, protocolByte, 0x3c, (uint8_t)part, 0x03,
-				0x00, 0x00, 0x00, 0x00, 0x00, speed, 0x00, 0x00, 0x64
-			};
-			break;
-		case NativeEffect::hwave:
-			switch (part) {
-				case NativeEffectPart::logo:
-					setNativeEffect(NativeEffect::color, part, 0, Color({0x00, 0xff, 0xff}));
-					break;
-				default:
-					data = {
-						0x11, 0xff, protocolByte, 0x3c, (uint8_t)part, 0x04,
-						0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x01, 0x64, speed
-					};
-					break;
-			}
-			break;
-		case NativeEffect::vwave:
-			switch (part) {
-				case NativeEffectPart::logo:
-					setNativeEffect(NativeEffect::color, part, 0, Color({0x00, 0xff, 0xff}));
-					break;
-				default:
-					data = {
-						0x11, 0xff, protocolByte, 0x3c, (uint8_t)part, 0x04,
-						0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x02, 0x64, speed
-					};
-					break;
-			}
-			break;
-		case NativeEffect::cwave:
-			switch (part) {
-				case NativeEffectPart::logo:
-					setNativeEffect(NativeEffect::color, part, 0, Color({0x00, 0xff, 0xff}));
-					break;
-				default:
-					data = {
-						0x11, 0xff, protocolByte, 0x3c, (uint8_t)part, 0x04,
-						0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x03, 0x64, speed
-					};
-					break;
-			}
-			break;
-		
-		default:
-			return false;
+	if ((effectGroup == NativeEffectGroup::waves) && (part == NativeEffectPart::logo)) {
+		return setNativeEffect(NativeEffect::color, part, std::chrono::seconds(0), Color({0x00, 0xff, 0xff}), storage);
 	}
-	
-	data.resize(20, 0x00);
+
+	byte_buffer_t data = {
+		0x11, 0xff, protocolByte, 0x3c,
+		(uint8_t)part, static_cast<uint8_t>(effectGroup),
+		// color of static-color and breathing effects
+		color.red, color.green, color.blue,
+		// period of breathing effect (ms)
+		static_cast<uint8_t>(period.count() >> 8), static_cast<uint8_t>(period.count() & 0xff),
+		// period of cycle effect (ms)
+		static_cast<uint8_t>(period.count() >> 8), static_cast<uint8_t>(period.count() & 0xff),
+		static_cast<uint8_t>(static_cast<uint16_t>(effect) & 0xff), // wave variation (e.g. horizontal)
+		0x64, // unused?
+		// period of wave effect (ms)
+		static_cast<uint8_t>(period.count() >> 8), // LSB is shared with cycle effect above
+		static_cast<uint8_t>(storage),
+		0, // unused?
+		0, // unused?
+		0, // unused?
+	};
 	return sendDataInternal(data);
 }
 
@@ -859,10 +835,23 @@ LedKeyboard::byte_buffer_t LedKeyboard::getKeyGroupAddress(LedKeyboard::KeyAddre
 		case KeyboardModel::g413:
 		  return {}; // Device doesn't support per-key setting
 		case KeyboardModel::g410:
-    case KeyboardModel::g513:
+		case KeyboardModel::g513:
+		case KeyboardModel::gpro:
+			switch (keyAddressGroup) {
+				case LedKeyboard::KeyAddressGroup::logo:
+					return { 0x11, 0xff, 0x0c, 0x3a, 0x00, 0x10, 0x00, 0x01 };
+				case LedKeyboard::KeyAddressGroup::indicators:
+					return { 0x12, 0xff, 0x0c, 0x3a, 0x00, 0x40, 0x00, 0x05 };
+				case LedKeyboard::KeyAddressGroup::gkeys:
+					return {};
+				case LedKeyboard::KeyAddressGroup::multimedia:
+					return {};
+				case LedKeyboard::KeyAddressGroup::keys:
+					return { 0x12, 0xff, 0x0c, 0x3a, 0x00, 0x01, 0x00, 0x0e };
+			}
+			break;
 		case KeyboardModel::g610:
 		case KeyboardModel::g810:
-		case KeyboardModel::gpro:
 			switch (keyAddressGroup) {
 				case LedKeyboard::KeyAddressGroup::logo:
 					return { 0x11, 0xff, 0x0c, 0x3a, 0x00, 0x10, 0x00, 0x01 };

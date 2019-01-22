@@ -19,7 +19,13 @@ hidapi is recommended but if you encounter a problem on your system, switch to l
 ArchLinux (aur) :</br>
 `yaourt -S g810-led-git` # with yaourt</br>
 `pacaur -S g810-led-git` # with pacaur</br>
-
+Fedora (copr) :<br/>
+`sudo dnf copr enable lkiesow/g810-led` # Enable Copr repository<br/>
+`sudo dnf install g810-led`<br/>
+Gentoo :<br/>
+`emerge app-misc/g810-led`<br/>
+Debian (unstable, and 10 or later), Ubuntu 19.04 or later :<br/>
+`apt install g810-led`
 
 ## Installation of dependencies :</br>
 ArchLinux :</br>
@@ -31,6 +37,9 @@ Debian :</br>
 Fedora :</br>
 `sudo dnf install git make gcc-c++ hidapi-devel` # for hidapi</br>
 `sudo dnf install git make gcc-c++ libusbx-devel` # for libusb</br>
+Gentoo :<br/>
+`sudo emerge dev-vcs/git dev-libs/hidapi` # for hidapi<br/>
+`sudo emerge dev-vcs/git dev-libs/libusb` # for libusb<br/>
 
 ## Installation :</br>
 `git clone https://github.com/MatMoul/g810-led.git`</br>

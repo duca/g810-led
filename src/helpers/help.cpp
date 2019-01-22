@@ -1,3 +1,19 @@
+/*
+  This file is part of g810-led.
+
+  g810-led is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  g810-led is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with g810-led.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "help.h"
 
 #include <iostream>
@@ -16,6 +32,7 @@ namespace help {
 		if(cmdName == "g213-led") return KeyboardFeatures::g213;
 		else if(cmdName == "g410-led") return KeyboardFeatures::g410;
 		else if(cmdName == "g413-led") return KeyboardFeatures::g413;
+		else if(cmdName == "g513-led") return KeyboardFeatures::g513;
 		else if(cmdName == "g610-led") return KeyboardFeatures::g610;
 		else if(cmdName == "g810-led") return KeyboardFeatures::g810;
 		else if(cmdName == "g910-led") return KeyboardFeatures::g910;
@@ -58,7 +75,10 @@ namespace help {
 			cout<<"  -c\t\t\t\t\tCommit change"<<endl;
 			cout<<endl;
 		}
-		cout<<"  -fx ...\t\t\t\tUse --help-effects for more detail"<<endl;
+		cout<<"  -fx ...\t\t\t\tActivate an on-board lighting effect"<<endl;
+		if((features | KeyboardFeatures::userstoredlighting) == features)
+			cout<<"  -fx-store ...\t\t\t\tSet an on-board effect as user-stored lighting"<<endl;
+		cout<<"               \t\t\t\tUse --help-effects for more detail"<<endl;
 		cout<<endl;
 		cout<<"  < {profile}\t\t\t\tSet a profile from a file (use --help-samples for more detail)"<<endl;
 		cout<<"  |\t\t\t\t\tSet a profile from stdin (for scripting) (use --help-samples for more detail)"<<endl;
@@ -79,7 +99,7 @@ namespace help {
 		cout<<"  -dv\t\t\t\t\tDevice vendor ID, such as 046d for Logitech. Can be omitted to match any vendor ID"<<endl;
 		cout<<"  -dp\t\t\t\t\tDevice product ID, such as c337 for Logitech G810. Can be omitted to match any product ID"<<endl;
 		cout<<"  -ds\t\t\t\t\tDevice serial number, Can be omitted to match the first device found"<<endl;
-		cout<<"  -tuk\t\t\t\t\tTest unsuported keyboard with one of supported protocol (1-3) -dv and -dp are required"<<endl;
+		cout<<"  -tuk\t\t\t\t\tTest unsupported keyboard with one of supported protocol (1-3) -dv and -dp are required"<<endl;
 		cout<<endl;
 		cout<<"Values:"<<endl;
 		if((features | KeyboardFeatures::rgb) == features)
@@ -88,7 +108,9 @@ namespace help {
 			cout<<"  color formats :\t\t\tII (hex value for intensity)"<<endl;
 		if((features | KeyboardFeatures::setregion) == features)
 			cout<<"  region formats :\t\t\tRN (integer value for region, 1 to 5)"<<endl;
-		cout<<"  speed formats :\t\t\tSS (hex value for speed 01 to ff)"<<endl;
+		cout<<"  period formats :\t\t\tDms (decimal integer; units of milliseconds)"<<endl;
+		cout<<"                  \t\t\tDs  (decimal integer; units of seconds)"<<endl;
+		cout<<"                  \t\t\tSS  (hex value 01 to ff; units of 256ms)"<<endl;
 		cout<<endl;
 		if((features | KeyboardFeatures::setkey) == features)
 			cout<<"  key values :\t\t\t\tabc... 123... and other (use --help-keys for more detail)"<<endl;
@@ -240,16 +262,24 @@ namespace help {
 		cout<<cmdName<<" Effects"<<endl;
 		cout<<"----------------"<<endl;
 		cout<<endl;
-		cout<<"At this time, FX are only tested on g810 !"<<endl;
+		cout<<"At this time, FX are only tested on g512, g810, and gpro !"<<endl;
 		cout<<endl;
-		cout<<"  -fx {effect} {target}"<<endl;
+		cout<<"  -fx ...      \t\t\t\tActivate an on-board lighting effect"<<endl;
+		string optionalStore;
+		if((features | KeyboardFeatures::userstoredlighting) == features) {
+			cout<<"  -fx-store ...\t\t\t\tSet an on-board effect as user-stored lighting"<<endl;
+			optionalStore = "[-store]";
+		}
 		cout<<endl;
-		cout<<"  -fx color {target} {color}"<<endl;
-		cout<<"  -fx breathing {target} {color} {speed}"<<endl;
-		cout<<"  -fx cycle {target} {speed}"<<endl;
-		cout<<"  -fx hwave {target} {speed}"<<endl;
-		cout<<"  -fx vwave {target} {speed}"<<endl;
-		cout<<"  -fx cwave {target} {speed}"<<endl;
+		cout<<"  -fx" << optionalStore << " {effect} {target}"<<endl;
+		cout<<endl;
+		cout<<"  -fx" << optionalStore << " color {target} {color}"<<endl;
+		cout<<"  -fx" << optionalStore << " breathing {target} {color} {period}"<<endl;
+		cout<<"  -fx" << optionalStore << " cycle {target} {period}"<<endl;
+		cout<<"  -fx" << optionalStore << " waves {target} {period}"<<endl;
+		cout<<"  -fx" << optionalStore << " hwave {target} {period}"<<endl;
+		cout<<"  -fx" << optionalStore << " vwave {target} {period}"<<endl;
+		cout<<"  -fx" << optionalStore << " cwave {target} {period}"<<endl;
 		cout<<endl;
 		if((features | KeyboardFeatures::logo1) == features)
 			cout<<"target value :\t\t\t\tall, keys, logo"<<endl;
@@ -259,7 +289,9 @@ namespace help {
 			cout<<"color formats :\t\t\t\tRRGGBB (hex value for red, green and blue)"<<endl;
 		else if((features | KeyboardFeatures::rgb) == features)
 			cout<<"color formats :\t\t\t\tII (hex value for intensity)"<<endl;
-		cout<<"speed formats :\t\t\t\tSS (hex value for speed 01 to ff)"<<endl;
+		cout<<"period formats :\t\t\tDms (decimal integer; units of milliseconds)"<<endl;
+		cout<<"                \t\t\tDs  (decimal integer; units of seconds)"<<endl;
+		cout<<"                \t\t\tSS  (hex value 01 to ff; units of 256ms)"<<endl;
 		cout<<endl;
 	}
 	
@@ -318,7 +350,7 @@ namespace help {
 			cout<<"echo -e \"k w ff0000\\nk a ff0000\\nk s ff0000\\nk d ff0000\\nc\" | g810-led -pp # Set multiple keys"<<endl;
 			cout<<endl;
 		}
-		cout<<"Testing an unsuported keyboard :"<<endl;
+		cout<<"Testing an unsupported keyboard :"<<endl;
 		cout<<"lsusb"<<endl;
 		cout<<"#Sample result of lsusb : ID 046d:c331 Logitech, Inc. (dv=046d and dp=c331)"<<endl;
 		cout<<cmdName<<" -dv 046d -dp c331 -tuk 1 -a 000000"<<endl;
