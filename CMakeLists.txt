@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-
 project(g810-led)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+include(FindHIDAPI)
+include(FindLibUSB)
 
 add_subdirectory(src)
 
@@ -17,6 +19,6 @@ install(DIRECTORY sample_profiles DESTINATION ${BASE_DIRECTORY}/${CMAKE_PROJECT_
 install(DIRECTORY udev/           DESTINATION ${BASE_DIRECTORY}/udev/rules.d/)
 install(DIRECTORY systemd/        DESTINATION ${BASE_DIRECTORY}/systemd/user)  
   
-
+include(Packer)
 
 
